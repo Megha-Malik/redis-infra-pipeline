@@ -1,50 +1,70 @@
 ---
-- name: OS-Independent Redis Installation
+- name: Configure Redis on Private Instances via Bastion
   hosts: all
-  become: true
-  gather_facts: true
-
-  vars:
-    redis_package: "{{ 'redis6' if ansible_distribution == 'Amazon' else ('redis-server' if ansible_os_family == 'Debian' else 'redis') }}"
-    redis_service: "{{ 'redis6' if ansible_distribution == 'Amazon' else ('redis-server' if ansible_os_family == 'Debian' else 'redis') }}"
-    redis_config: "{{ '/etc/redis/redis.conf' if ansible_os_family == 'Debian' else '/etc/redis6/redis6.conf' }}"
-
+  become: yes
   tasks:
-    - name: Display detected OS
-      ansible.builtin.debug:
-        msg: "Target Host {{ inventory_hostname }} is running {{ ansible_distribution }} ({{ ansible_os_family }} family)"
 
-    - name: Update apt cache (Debian/Ubuntu)
-      ansible.builtin.apt:
-        update_cache: yes
-      when: ansible_os_family == "Debian"
+    # ==========================================
+    # 1. SET SSH USER DYNAMICALLY
+    # ==========================================
+    - name: Set SSH User for Ubuntu
+      set_fact:
+        ansible_user: ubuntu
+      when: "'os_ubuntu' in group_names"
 
-    - name: Install Redis Package
-      ansible.builtin.package:
-        name: "{{ redis_package }}"
+    - name: Set SSH User for Amazon Linux
+      set_fact:
+        ansible_user: ec2-user
+      when: "'os_amazon_linux' in group_names"
+
+    # ==========================================
+    # 2. UBUNTU SETUP
+    # ==========================================
+    - name: Update APT cache and install Redis (Ubuntu)
+      apt:
+        name: redis-server
         state: present
+        update_cache: yes
+      when: "'os_ubuntu' in group_names"
 
-    - name: Check if Redis config file exists
-      ansible.builtin.stat:
-        path: "{{ redis_config }}"
-      register: config_file_check
-
-    - name: Update Redis config to bind 0.0.0.0
-      ansible.builtin.lineinfile:
-        path: "{{ redis_config }}"
-        regexp: '^bind '
-        line: 'bind 0.0.0.0'
-      when: config_file_check.stat.exists
-      notify: Restart Redis Service
-
-    - name: Ensure Redis Service is started and enabled
-      ansible.builtin.service:
-        name: "{{ redis_service }}"
+    - name: Ensure Redis service is started & enabled (Ubuntu)
+      service:
+        name: redis-server
         state: started
         enabled: yes
+      when: "'os_ubuntu' in group_names"
 
-  handlers:
-    - name: Restart Redis Service
-      ansible.builtin.service:
-        name: "{{ redis_service }}"
-        state: restarted
+    # ==========================================
+    # 3. AMAZON LINUX 2023 SETUP
+    # ==========================================
+    - name: Install Redis 6 (Amazon Linux 2023)
+      dnf:
+        name: redis6
+        state: present
+      when: "'os_amazon_linux' in group_names"
+
+    - name: Ensure Redis service is started & enabled (Amazon Linux 2023)
+      service:
+        name: redis6
+        state: started
+        enabled: yes
+      when: "'os_amazon_linux' in group_names"
+
+    # ==========================================
+    # 4. QUICK VERIFICATION
+    # ==========================================
+    - name: Verify Redis service status (Ubuntu)
+      command: systemctl is-active redis-server
+      register: redis_ubuntu
+      when: "'os_ubuntu' in group_names"
+      changed_when: false
+
+    - name: Verify Redis service status (Amazon Linux)
+      command: systemctl is-active redis6
+      register: redis_al
+      when: "'os_amazon_linux' in group_names"
+      changed_when: false
+
+    - name: Show Installation Status
+      debug:
+        msg: "Redis Status: {{ redis_ubuntu.stdout if 'os_ubuntu' in group_names else redis_al.stdout }}"

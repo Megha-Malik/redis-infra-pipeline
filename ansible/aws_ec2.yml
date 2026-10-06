@@ -2,13 +2,9 @@ plugin: amazon.aws.aws_ec2
 regions:
   - ap-south-1
 
-filters:
-  tag:Role: redis-server
-  instance-state-name: [running]
+keyed_groups:
+  - key: tags.OS
+    prefix: os
 
 hostnames:
-  - ip-address
-
-compose:
-  ansible_host: public_ip_address
-  ansible_user: "('ubuntu') if (tags.OS | default('') == 'ubuntu' or ec2_tags.OS | default('') == 'ubuntu') else ('ec2-user')"
+  - private-ip-address
