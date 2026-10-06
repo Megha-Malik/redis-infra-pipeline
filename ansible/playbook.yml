@@ -2,6 +2,7 @@
 - name: OS-Independent Redis Installation
   hosts: all
   become: true
+  gather_facts: true
 
   tasks:
     - name: Display detected OS
@@ -20,7 +21,7 @@
 
     - name: Update Redis config to bind 0.0.0.0
       ansible.builtin.lineinfile:
-        path: "{{ '/etc/redis/redis.conf' if ansible_os_family == 'Debian' else '/etc/redis/redis.conf' }}"
+        path: "{{ '/etc/redis/redis.conf' if ansible_os_family == 'Debian' else '/etc/redis.conf' }}"
         regexp: '^bind '
         line: 'bind 0.0.0.0'
       notify: Restart Redis Service
