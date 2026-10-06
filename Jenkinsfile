@@ -45,7 +45,7 @@ pipeline {
             dir('ansible') {
                 sh '''
                     chmod 400 $SSH_KEY
-                    ansible-playbook -i inventory.ini site.yml --private-key $SSH_KEY
+                    ansible-playbook -i inventory.ini playbook.yml --private-key $SSH_KEY
                 '''
             }
         }
