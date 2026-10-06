@@ -3,7 +3,7 @@ provider "aws" {
 }
 
 # 1. Fetch Default VPC automatically
-data "aws_default_vpc" "default" {}
+resource "aws_default_vpc" "default" {}
 
 # 2. Security Group allowing SSH (22) and Redis (6379)
 resource "aws_security_group" "redis_sg" {
