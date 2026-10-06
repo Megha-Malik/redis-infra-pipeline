@@ -2,11 +2,7 @@ pipeline {
     agent any
 
     environment {
-        AWS_DEFAULT_REGION = 'ap-south-1'
-        TF_DIR             = 'terraform'
-        ANSIBLE_DIR        = 'ansible'
-        AWS_KEY_NAME       = 'Redis-key'
-        BASTION_USER       = 'ec2-user' // Amazon Linux Bastion User
+        AWS_REGION = 'ap-south-1' // Apne AWS region ke hisaab se update karein
     }
 
     stages {
@@ -18,23 +14,12 @@ pipeline {
 
         stage('Terraform Provisioning') {
             steps {
-                withCredentials([[
-                    $class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-credentials',
-                    accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                    secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
-                ]]) {
-                    dir(env.TF_DIR) {
+                withCredentials([
+                    aws(credentialsId: 'aws-credentials-id', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
+                    dir('terraform') {
                         sh 'terraform init'
-                        sh "terraform apply -auto-approve -var=\"key_name=${env.AWS_KEY_NAME}\""
-                        
-                        // Terraform Outputs se Bastion Public IP dynamically fetch kar rahe hain
-                        script {
-                            env.BASTION_IP = sh(
-                                script: 'terraform output -raw bastion_public_ip',
-                                returnStdout: true
-                            ).trim()
-                        }
+                        sh 'terraform apply -auto-approve -var=key_name=Redis-key'
                     }
                 }
             }
@@ -42,37 +27,35 @@ pipeline {
 
         stage('Wait For Server Boot') {
             steps {
-                echo "Bastion IP: ${env.BASTION_IP}"
-                echo 'Waiting 30 seconds for instances to complete SSH initialization...'
-                sleep time: 30, unit: 'SECONDS'
+                echo 'Waiting 30 seconds for EC2 instances to finish boot...'
+                sleep 30
             }
         }
 
         stage('Ansible Configuration') {
-    steps {
-        withCredentials([
-            sshUserPrivateKey(credentialsId: 'ssh-key-id', keyFileVariable: 'SSH_KEY'),
-            amazonWebServices(credentialsId: 'aws-credentials-id', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')
-        ]) {
-            dir('ansible') {
-                sh '''
-                    export AWS_REGION="ap-south-1"
-                    ansible-playbook -i aws_ec2.yml playbook.yml --private-key $SSH_KEY
-                '''
+            steps {
+                withCredentials([
+                    sshUserPrivateKey(credentialsId: 'redis-key-id', keyFileVariable: 'SSH_KEY'),
+                    aws(credentialsId: 'aws-credentials-id', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
+                    dir('ansible') {
+                        sh '''
+                            chmod 400 $SSH_KEY
+                            export ANSIBLE_HOST_KEY_CHECKING=False
+                            ansible-galaxy collection install amazon.aws --force
+                            ansible-playbook -i aws_ec2.yml playbook.yml \
+                              --private-key $SSH_KEY \
+                              --ssh-common-args='-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+                        '''
+                    }
+                }
             }
         }
     }
-}
 
     post {
         always {
-            cleanWs() // Pipeline completion par workspace artifacts safely clear karne ke liye
-        }
-        success {
-            echo "One-Click Deployment Successful! Redis configured on Private Instances via Bastion Host."
-        }
-        failure {
-            echo "Deployment Failed! Check the step logs above for details."
+            cleanWs()
         }
     }
 }
