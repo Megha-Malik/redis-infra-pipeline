@@ -2,10 +2,14 @@ provider "aws" {
   region = var.aws_region
 }
 
-# 1. Security Group allowing SSH (22) and Redis (6379)
+# 1. Fetch Default VPC automatically
+data "aws_default_vpc" "default" {}
+
+# 2. Security Group allowing SSH (22) and Redis (6379)
 resource "aws_security_group" "redis_sg" {
   name        = "redis-multi-os-sg"
   description = "Allow SSH and Redis inbound"
+  vpc_id      = data.aws_default_vpc.default.id # <--- Added this line
 
   ingress {
     from_port   = 22
@@ -29,7 +33,7 @@ resource "aws_security_group" "redis_sg" {
   }
 }
 
-# 2. Ubuntu 22.04 AMI Fetching
+# 3. Ubuntu 22.04 AMI Fetching
 data "aws_ami" "ubuntu" {
   most_recent = true
   owners      = ["099720109477"]
@@ -40,7 +44,7 @@ data "aws_ami" "ubuntu" {
   }
 }
 
-# 3. Amazon Linux 2023 AMI Fetching
+# 4. Amazon Linux 2023 AMI Fetching
 data "aws_ami" "amazon_linux_2023" {
   most_recent = true
   owners      = ["137112412989"]
@@ -51,7 +55,7 @@ data "aws_ami" "amazon_linux_2023" {
   }
 }
 
-# 4. Instance 1: Ubuntu Server
+# 5. Instance 1: Ubuntu Server
 resource "aws_instance" "ubuntu_redis" {
   ami                    = data.aws_ami.ubuntu.id
   instance_type          = var.instance_type
@@ -65,7 +69,7 @@ resource "aws_instance" "ubuntu_redis" {
   }
 }
 
-# 5. Instance 2: Amazon Linux Server
+# 6. Instance 2: Amazon Linux Server
 resource "aws_instance" "al2023_redis" {
   ami                    = data.aws_ami.amazon_linux_2023.id
   instance_type          = var.instance_type
