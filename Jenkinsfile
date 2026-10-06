@@ -54,7 +54,9 @@ pipeline {
                             chmod 400 $SSH_KEY
                             export ANSIBLE_HOST_KEY_CHECKING=False
                             ansible-galaxy collection install amazon.aws --force
-                            ansible-playbook -i aws_ec2.yml playbook.yml --private-key $SSH_KEY
+                            ansible-playbook -i aws_ec2.yml playbook.yml \
+                              --private-key $SSH_KEY \
+                              --ssh-common-args="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
                         '''
                     }
                 }
