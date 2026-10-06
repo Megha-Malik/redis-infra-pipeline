@@ -11,4 +11,4 @@ hostnames:
 
 compose:
   ansible_host: public_ip_address
-  ansible_user: "{{ 'ubuntu' if tags.OS == 'ubuntu' else 'ec2-user' }}"
+  ansible_user: "('ubuntu') if (tags.OS | default('') == 'ubuntu' or ec2_tags.OS | default('') == 'ubuntu') else ('ec2-user')"
