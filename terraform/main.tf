@@ -9,7 +9,7 @@ resource "aws_default_vpc" "default" {}
 resource "aws_security_group" "redis_sg" {
   name        = "redis-multi-os-sg"
   description = "Allow SSH and Redis inbound"
-  vpc_id      = data.aws_default_vpc.default.id # <--- Added this line
+  vpc_id      = aws_default_vpc.default.id # <--- Added this line
 
   ingress {
     from_port   = 22
