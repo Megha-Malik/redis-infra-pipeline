@@ -15,5 +15,9 @@ hostnames:
 
 compose:
   ansible_host: public_ip_address
-
+  ansible_user: >-
+    if (tags.OS == 'ubuntu') then 'ubuntu'
+    else if (tags.OS == 'al2023') then 'ec2-user'
+    else 'ec2-user'
+    
 replace_dash_in_groups: yes    
