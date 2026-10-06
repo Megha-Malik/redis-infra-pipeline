@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        AWS_DEFAULT_REGION = 'us-east-1'
+        AWS_DEFAULT_REGION = 'ap-south-1'
         TF_DIR             = 'terraform'
         ANSIBLE_DIR        = 'ansible'
         AWS_KEY_NAME       = 'Redis-key' // <--- Apna AWS SSH Key ka naam yahan likhein
@@ -16,15 +16,20 @@ pipeline {
         }
 
         stage('Terraform Provisioning') {
-            steps {
-                withCredentials([usernamePassword(credentialsId: 'aws-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY')]) {
-                    dir(env.TF_DIR) {
-                        sh 'terraform init'
-                        sh "terraform apply -auto-approve -var=\"key_name=${env.AWS_KEY_NAME}\""
-                    }
-                }
+    steps {
+        withCredentials([[
+            $class: 'AmazonWebServicesCredentialsBinding',
+            credentialsId: 'aws-credentials',
+            accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+            secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
+        ]]) {
+            dir(env.TF_DIR) {
+                sh 'terraform init'
+                sh "terraform apply -auto-approve -var=\"key_name=${env.AWS_KEY_NAME}\""
             }
         }
+    }
+}
 
         stage('Wait For Server Boot') {
             steps {
