@@ -1,0 +1,39 @@
+---
+- name: OS-Independent Redis Installation
+  hosts: role_redis_server
+  become: true
+  gather_facts: true
+
+  vars:
+    redis_package_name: "{{ 'redis-server' if ansible_os_family == 'Debian' else 'redis' }}"
+    redis_service_name: "{{ 'redis-server' if ansible_os_family == 'Debian' else 'redis' }}"
+    redis_conf_path: "{{ '/etc/redis/redis.conf' if ansible_os_family == 'Debian' else '/etc/redis/redis.conf' }}"
+
+  tasks:
+    - name: Display detected OS
+      ansible.builtin.debug:
+        msg: "Target Host {{ inventory_hostname }} is running {{ ansible_distribution }} ({{ ansible_os_family }} family)"
+
+    - name: Install Redis Package
+      ansible.builtin.package:
+        name: "{{ redis_package_name }}"
+        state: present
+
+    - name: Update Redis config to bind 0.0.0.0
+      ansible.builtin.lineinfile:
+        path: "{{ redis_conf_path }}"
+        regexp: '^bind '
+        line: 'bind 0.0.0.0'
+      notify: Restart Redis Service
+
+    - name: Ensure Redis Service is started and enabled
+      ansible.builtin.service:
+        name: "{{ redis_service_name }}"
+        state: started
+        enabled: true
+
+  handlers:
+    - name: Restart Redis Service
+      ansible.builtin.service:
+        name: "{{ redis_service_name }}"
+        state: restarted
