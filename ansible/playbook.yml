@@ -5,9 +5,9 @@
   gather_facts: true
 
   vars:
-    redis_package_name: "{{ 'redis-server' if ansible_os_family == 'Debian' else 'redis' }}"
-    redis_service_name: "{{ 'redis-server' if ansible_os_family == 'Debian' else 'redis' }}"
-    redis_conf_path: "{{ '/etc/redis/redis.conf' if ansible_os_family == 'Debian' else '/etc/redis/redis.conf' }}"
+    redis_package_name: "{{ 'redis-server' if ansible_os_family == 'Debian' else 'redis6' }}"
+    redis_service_name: "{{ 'redis-server' if ansible_os_family == 'Debian' else 'redis6' }}"
+    redis_conf_path: "{{ '/etc/redis/redis.conf' if ansible_os_family == 'Debian' else '/etc/redis6/redis6.conf' }}"
 
   tasks:
     - name: Display detected OS
