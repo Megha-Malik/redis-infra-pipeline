@@ -39,23 +39,18 @@ pipeline {
         }
 
         stage('Ansible Configuration') {
-            steps {
-                withCredentials([
-                    usernamePassword(credentialsId: 'aws-credentials', usernameVariable: 'AWS_ACCESS_KEY_ID', passwordVariable: 'AWS_SECRET_ACCESS_KEY'),
-                    file(credentialsId: 'ssh-private-key', variable: 'SSH_KEY')
-                ]) {
-                    dir(env.ANSIBLE_DIR) {
-                        sh 'cp $SSH_KEY /tmp/id_rsa && chmod 600 /tmp/id_rsa'
-                        sh 'ansible-inventory -i aws_ec2.yml --graph'
-                        
-                        sh '''
-                          ansible-playbook -i aws_ec2.yml playbook.yml -u ubuntu --extra-vars "ansible_ssh_common_args='-o StrictHostKeyChecking=no'" || \
-                          ansible-playbook -i aws_ec2.yml playbook.yml -u ec2-user --extra-vars "ansible_ssh_common_args='-o StrictHostKeyChecking=no'"
-                        '''
-                    }
-                }
+    steps {
+        // SSH Key Credential use karein (jaise 'ssh-key-id' jo 'SSH Username with private key' type ka ho)
+        withCredentials([sshUserPrivateKey(credentialsId: 'ssh-private-key', keyFileVariable: 'SSH_KEY')]) {
+            dir('ansible') {
+                sh '''
+                    chmod 400 $SSH_KEY
+                    ansible-playbook -i inventory.ini site.yml --private-key $SSH_KEY
+                '''
             }
         }
+    }
+}
     }
 
     post {
