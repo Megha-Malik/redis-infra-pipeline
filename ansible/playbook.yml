@@ -1,6 +1,6 @@
 ---
 - name: OS-Independent Redis Installation
-  hosts: role_redis_server
+  hosts: all
   become: true
   gather_facts: true
 
