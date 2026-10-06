@@ -16,20 +16,20 @@ pipeline {
         }
 
         stage('Terraform Provisioning') {
-    steps {
-        withCredentials([[
-            $class: 'AmazonWebServicesCredentialsBinding',
-            credentialsId: 'aws-credentials',
-            accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-            secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
-        ]]) {
-            dir(env.TF_DIR) {
-                sh 'terraform init'
-                sh "terraform apply -auto-approve -var=\"key_name=${env.AWS_KEY_NAME}\""
+            steps {
+                withCredentials([[
+                    $class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-credentials',
+                    accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                    secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
+                ]]) {
+                    dir(env.TF_DIR) {
+                        sh 'terraform init'
+                        sh "terraform apply -auto-approve -var=\"key_name=${env.AWS_KEY_NAME}\""
+                    }
+                }
             }
         }
-    }
-}
 
         stage('Wait For Server Boot') {
             steps {
@@ -39,18 +39,22 @@ pipeline {
         }
 
         stage('Ansible Configuration') {
-    steps {
-        // SSH Key Credential use karein (jaise 'ssh-key-id' jo 'SSH Username with private key' type ka ho)
-        withCredentials([sshUserPrivateKey(credentialsId: 'ssh-private-key', keyFileVariable: 'SSH_KEY')]) {
-            dir('ansible') {
-                sh '''
-                    chmod 400 $SSH_KEY
-                    ansible-playbook -i inventory.ini playbook.yml --private-key $SSH_KEY
-                '''
+            steps {
+                withCredentials([
+                    sshUserPrivateKey(credentialsId: 'ssh-private-key', keyFileVariable: 'SSH_KEY'),
+                    amazonWebServices(credentialsId: 'aws-credentials', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY')
+                ]) {
+                    dir('ansible') {
+                        sh '''
+                            chmod 400 $SSH_KEY
+                            export ANSIBLE_HOST_KEY_CHECKING=False
+                            ansible-galaxy collection install amazon.aws --force
+                            ansible-playbook -i aws_ec2.yml playbook.yml --private-key $SSH_KEY
+                        '''
+                    }
+                }
             }
         }
-    }
-}
     }
 
     post {
