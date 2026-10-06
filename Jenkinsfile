@@ -39,7 +39,7 @@ pipeline {
         stage('Ansible Configuration') {
             steps {
                 withCredentials([
-                    sshUserPrivateKey(credentialsId: 'redis-key-id', keyFileVariable: 'SSH_KEY'),
+                    sshUserPrivateKey(credentialsId: 'ssh-private-keyble: 'SSH_KEY'),
                     aws(
                         credentialsId: 'aws-credentials',
                         accessKeyVariable: 'AWS_ACCESS_KEY_ID',
