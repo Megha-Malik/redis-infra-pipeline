@@ -62,9 +62,9 @@ pipeline {
         }
     }
 
-    post {
-        always {
-            cleanWs()
-        }
+ post {
+    always {
+        echo 'Pipeline execution finished. Workspace retained for state management.'
     }
+}
 }
