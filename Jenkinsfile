@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        AWS_REGION = 'ap-south-1' // Apne AWS region ke hisaab se update karein
+        AWS_REGION = 'ap-south-1'
     }
 
     stages {
@@ -16,7 +16,7 @@ pipeline {
             steps {
                 withCredentials([
                     aws(
-                        credentialsId: 'aws-credentials', // Updated to match your Jenkins credential ID
+                        credentialsId: 'aws-credentials',
                         accessKeyVariable: 'AWS_ACCESS_KEY_ID',
                         secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
                     )
@@ -41,7 +41,7 @@ pipeline {
                 withCredentials([
                     sshUserPrivateKey(credentialsId: 'redis-key-id', keyFileVariable: 'SSH_KEY'),
                     aws(
-                        credentialsId: 'aws-credentials', // Updated to match your Jenkins credential ID
+                        credentialsId: 'aws-credentials',
                         accessKeyVariable: 'AWS_ACCESS_KEY_ID',
                         secretKeyVariable: 'AWS_SECRET_ACCESS_KEY'
                     )
